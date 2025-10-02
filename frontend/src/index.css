@@ -116,3 +116,185 @@ button:focus-visible {
 .signup-button {
   margin-top: 20px;
 }
+
+.recent-transactions {
+  width: 60%;
+  margin: 0 auto;
+  max-width: 800px; /* Optional: set a maximum width */
+}
+
+.transaction-item {
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.transaction-amount {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.transaction-amount.income {
+  color: #28a745;
+}
+
+.transaction-amount.expense {
+  color: #dc3545;
+}
+
+.transaction-date {
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+.transaction-description {
+  color: #495057;
+  font-size: 1em;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 20px;
+}
+
+.form-welcome {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-control {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.form-message {
+  margin-top: 15px;
+  text-align: center;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: #d4edda;
+  color: #155724;
+  max-width: 400px;
+}
+
+.transaction-date-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.transaction-date {
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+.transaction-created {
+  color: #6c757d;
+  font-size: 0.75em;
+  margin-top: 2px;
+}
+
+.transaction-date-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.edit-icon {
+  color: #6c757d;
+  font-size: 0.8em;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.edit-icon:hover {
+  color: #007bff;
+}
+
+.transaction-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-icon {
+  color: #6c757d;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.edit-icon:hover {
+  color: #007bff;
+}
+
+.edit-form {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.btn-sm {
+  padding: 5px 15px;
+  font-size: 0.9em;
+}

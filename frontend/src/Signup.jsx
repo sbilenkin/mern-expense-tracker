@@ -4,7 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 
-function Signup() {
+function Signup({ onLogin }) {
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -21,10 +21,15 @@ function Signup() {
     });
     const data = await response.json();
     if (response.ok) {
-      toast.success('Sign up successful! You can now log in.');
+      toast.success('Sign up successful! Logging you in...');
+      sessionStorage.setItem('loggedIn', 'true');
+      sessionStorage.setItem('username', data.user.username);
+      if (onLogin) {
+        onLogin();
+      }
       setTimeout(() => {
-        navigate('/login'); // Redirect to login page after 2 seconds
-      }, 2000);
+        navigate('/'); // Redirect to home page
+      }, 1500);
     } else {
       toast.error(data.detail || 'Sign up failed');
     }
@@ -48,3 +53,5 @@ function Signup() {
     </div>
   )
 }
+
+export default Signup
