@@ -4,8 +4,9 @@ import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import '@fortawesome/fontawesome-free/css/all.css';
 
-function Transaction({ transaction, onEdit, onDelete }) {
+function Transaction({ transaction, onEdit, onDelete, isAdmin }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editData, setEditData] = useState({
     description: transaction.description,
     amount: transaction.amount,
@@ -17,15 +18,15 @@ function Transaction({ transaction, onEdit, onDelete }) {
     const date = new Date(dateString);
     const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
     return localDate.toLocaleDateString();
-  }
+  };
 
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString();
-  }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
-  }
+  };
 
   const handleCancel = () => {
     setIsEditing(false);
@@ -35,7 +36,7 @@ function Transaction({ transaction, onEdit, onDelete }) {
       type: transaction.type,
       date: transaction.date.split('T')[0]
     });
-  }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -43,14 +44,29 @@ function Transaction({ transaction, onEdit, onDelete }) {
       await onEdit(transaction._id, editData);
     }
     setIsEditing(false);
-  }
+  };
 
   const handleInputChange = (field, value) => {
     setEditData(prev => ({
       ...prev,
       [field]: value
     }));
-  }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (onDelete) {
+      await onDelete(transaction._id);
+    }
+    setIsDeleting(false);
+  };
+
+  const handleCancelDelete = () => {
+    setIsDeleting(false);
+  };
 
   if (isEditing) {
     return (
@@ -123,12 +139,29 @@ function Transaction({ transaction, onEdit, onDelete }) {
           <small className="transaction-created text-muted">
             Created: {formatDateTime(transaction.createdAt)}
           </small>
+          {isAdmin && (
+            <small className="transaction-username">Created by: {transaction.username}</small>
+          )}
         </div>
       </div>
       <div className="transaction-footer">
         <div className="transaction-description">{transaction.description}</div>
-        <i className="fas fa-pencil-alt edit-icon" onClick={handleEdit}></i>
+        <div className="transaction-icons">
+          <i className="fas fa-pencil-alt edit-icon" onClick={handleEdit}></i>
+          <i className="fas fa-trash delete-icon" onClick={handleDelete}></i>
+        </div>
       </div>
+      {isDeleting && (
+        <div className="delete-confirmation">
+          <p>Are you sure you want to delete this transaction?</p>
+          <button className="btn btn-danger btn-sm" onClick={handleConfirmDelete}>
+            Delete
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handleCancelDelete}>
+            Cancel
+          </button>
+        </div>
+      )}
     </li>
   );
 }

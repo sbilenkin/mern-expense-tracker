@@ -15,6 +15,7 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://mongo:27017/expense-tr
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  admin: { type: Boolean, default: false },
 });
 
 const User = mongoose.model("User", userSchema);
@@ -58,7 +59,7 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({ detail: "Invalid username or password" });
     }
-    res.json({ message: "Login successful", user: { id: user._id, username: user.username } });
+    res.json({ message: "Login successful", user: { id: user._id, username: user.username, isAdmin: user.admin } });
   } catch (error) {
     res.status(500).json({ detail: "Server error" });
   }
@@ -94,7 +95,17 @@ app.get("/transactions/:username", async (req, res) => {
     if (!user) {
       return res.status(404).json({ detail: "User not found" });
     }
-    const transactions = await Transaction.find({ username });
+    const transactions = await Transaction.find({ username }).sort({ date: -1, createdAt: -1 });
+    res.json({ transactions });
+  } catch (error) {
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Get all transactions (admin only)
+app.get("/transactions", async (req, res) => {
+  try {
+    const transactions = await Transaction.find().sort({ date: -1, createdAt: -1 });
     res.json({ transactions });
   } catch (error) {
     res.status(500).json({ detail: "Server error" });
@@ -124,6 +135,59 @@ app.post("/transactions", async (req, res) => {
     });
     await newTransaction.save();
     res.status(201).json({ message: "Transaction added successfully", transaction: newTransaction });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Edit a transaction
+app.put("/transactions/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, date, type } = req.body;
+    const existingTransaction = await Transaction.findById(id);
+    if (!existingTransaction) {
+      return res.status(404).json({ detail: "Transaction not found" });
+    }
+    if (!description || !amount || !type) {
+      return res.status(400).json({ detail: "Missing required fields" });
+    }
+    if (!['income', 'expense'].includes(type)) {
+      return res.status(400).json({ detail: "Invalid transaction type" });
+    }
+    const updatedTransaction = await Transaction.findByIdAndUpdate(
+      id,
+      {
+        description,
+        amount: parseFloat(amount),
+        date: date ? new Date(date) : existingTransaction.date,
+        type,
+      },
+      { new: true }
+    );
+    res.json({
+      message: "Transaction updated successfully",
+      transaction: updatedTransaction
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Delete a transaction
+app.delete("/transactions/:id", async(req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedTransaction = await Transaction.findByIdAndDelete(id);
+    if (!deletedTransaction) {
+      return res.status(404).json({ detail: "Transaction not found" });
+    }
+    res.json({
+      message: "Transaction deleted successfully",
+      deletedId: id
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ detail: "Server error" });
