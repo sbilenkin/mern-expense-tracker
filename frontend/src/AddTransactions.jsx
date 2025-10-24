@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -7,6 +8,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 function AddTransactions() {
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+  const { authFetch, logout } = useAuth();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -19,7 +21,7 @@ function AddTransactions() {
     // Trying to figure out why date is not being sent correctly
     console.log({ username, description, amount, date, type });
     try {
-      const response = await fetch('http://localhost:5000/transactions', {
+      const response = await authFetch('http://localhost:5000/transactions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,9 +42,7 @@ function AddTransactions() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('loggedIn');
-    sessionStorage.removeItem('username');
-    window.location.href = '/login';
+    logout();
   }
 
   return (

@@ -1,35 +1,50 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext.jsx';
 import 'bootstrap/dist/css/bootstrap.css';
 import './index.css'
 
 function Login({ onLogin }) {
   const [message, setMessage] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
+
+  // const handleSubmit = async (event) => {
+  //   event.preventDefault();
+  //   const formData = new FormData(event.target);
+  //   const username = formData.get('username');
+  //   const password = formData.get('password');
+  //   const response = await fetch('http://localhost:5000/login', {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //     },
+  //     body: JSON.stringify({ username, password }),
+  //   });
+  //   const data = await response.json();
+  //   if (response.ok) {
+  //     setMessage(data.message);
+  //     sessionStorage.setItem('loggedIn', 'true');
+  //     sessionStorage.setItem('username', data.user.username);
+  //     sessionStorage.setItem('isAdmin', data.user.isAdmin ? 'true' : 'false');
+  //     console.log(data.user.username);
+  //     if (onLogin) onLogin();
+  //     navigate('/');
+  //   } else {
+  //     setMessage(data.detail || 'Login failed');
+  //   }
+  // };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const username = formData.get('username');
     const password = formData.get('password');
-    const response = await fetch('http://localhost:5000/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await response.json();
-    if (response.ok) {
-      setMessage(data.message);
-      sessionStorage.setItem('loggedIn', 'true');
-      sessionStorage.setItem('username', data.user.username);
-      sessionStorage.setItem('isAdmin', data.user.isAdmin ? 'true' : 'false');
-      console.log(data.user.username);
-      if (onLogin) onLogin();
+    const result = await login(username, password);
+    if (result.success) {
       navigate('/');
     } else {
-      setMessage(data.detail || 'Login failed');
+      setMessage(result.error);
     }
   };
 

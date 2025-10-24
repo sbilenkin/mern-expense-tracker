@@ -1,11 +1,14 @@
-import React, { useState } from 'react'
-import Transaction from './Transaction'
-import './index.css'
+import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import Transaction from './Transaction';
+import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import { useEffect } from 'react';
 
-function Home({ loggedIn, username, isAdmin }) {
+function Home() {
+  const { user, authFetch, logout, isLoggedIn, isAdmin } = useAuth();
   const [transactions, setTransactions] = useState([]);
 
   const calculateBalance = () => {
@@ -32,67 +35,51 @@ function Home({ loggedIn, username, isAdmin }) {
   };
 
   const fetchTransactions = async () => {
-    if (loggedIn && username) {
-      try {
-        const reqString = isAdmin ? 'http://localhost:5000/transactions' : `http://localhost:5000/transactions/${username}`;  
-        const response = await fetch(reqString, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setTransactions(data.transactions || []);
-        } else {
-          console.error("Failed to fetch transactions");
-        }
-      } catch (error) {
-        console.error("Error fetching transactions:", error);
+    try {
+      const reqString = isAdmin
+        ? 'http://localhost:5000/transactions'
+        : `http://localhost:5000/transactions/${user.username}`
+
+      const response = await authFetch(reqString)
+
+      if (response.ok) {
+        const data = await response.json()
+        setTransactions(data.transactions || [])
       }
+    } catch (error) {
+      console.error("Error fetching transactions:", error)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchTransactions();
-  }, [loggedIn, username]);
+    if (isLoggedIn) {
+      fetchTransactions();
+    }
+  }, [isLoggedIn]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('loggedIn');
-    sessionStorage.removeItem('username');
-    window.location.href = '/login';
+    logout();
   };
 
   const onEdit = async (id, updatedData) => {
     try {
-      const response = await fetch(`http://localhost:5000/transactions/${id}`, {
+      const response = await authFetch(`http://localhost:5000/transactions/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updatedData),
-      });
+      })
+
       if (response.ok) {
-        const updatedTransaction = await response.json();
-        setTransactions(prev =>
-          prev.map(t => t._id === updatedTransaction.transaction._id
-            ? updatedTransaction.transaction
-            : t
-          )
-        );
+        fetchTransactions() // Refresh the list
       }
     } catch (error) {
-      console.error("Error updating transaction:", error);
+      console.error("Error updating transaction:", error)
     }
-  };
+  }
 
   const onDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/transactions/${id}`, {
+      const response = await authFetch(`http://localhost:5000/transactions/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
       if (response.ok) {
         setTransactions(prev => prev.filter(t => t._id !== id));
@@ -103,6 +90,10 @@ function Home({ loggedIn, username, isAdmin }) {
       console.error("Error deleting transaction:", error);
     }
   };
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
+  }
 
   return (
     <div className="Home">
@@ -117,6 +108,11 @@ function Home({ loggedIn, username, isAdmin }) {
               <li className="nav-item">
                 <a className="nav-link active" aria-current="page" href="#">Home</a>
               </li>
+              {isAdmin && (
+                <li>
+                  <a className="nav-link" aria-current="page" href="/user-management">Manage Users</a>
+                </li>
+              )}
               <li className="nav-item">
                 <a className="nav-link btn btn-primary add-transactions" aria-current="page" href="/add-transactions">Add Transactions</a>
               </li>

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -11,6 +12,24 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://mongo:27017/expense-tracker";
+
+const JWT_SECRET = process.env.JWT_SECRET || "secret-key";
+
+// JWT Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ detail: "Access token required" });
+  }
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ detail: "Invalid access token" });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
@@ -59,7 +78,20 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({ detail: "Invalid username or password" });
     }
-    res.json({ message: "Login successful", user: { id: user._id, username: user.username, isAdmin: user.admin } });
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username,
+        isAdmin: user.admin
+      },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ 
+      message: "Login successful",
+      token,
+      user: { username: user.username, isAdmin: user.admin }
+    });
   } catch (error) {
     res.status(500).json({ detail: "Server error" });
   }
@@ -88,9 +120,12 @@ app.post("/signup", async (req, res) => {
 });
 
 // Get transactions for a user
-app.get("/transactions/:username", async (req, res) => {
+app.get("/transactions/:username", authenticateToken, async (req, res) => {
   try {
     const { username } = req.params;
+    if (!req.user.isAdmin && req.user.username !== username) {
+      return res.status(403).json({ detail: "Access denied" });
+    }
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(404).json({ detail: "User not found" });
@@ -103,7 +138,10 @@ app.get("/transactions/:username", async (req, res) => {
 });
 
 // Get all transactions (admin only)
-app.get("/transactions", async (req, res) => {
+app.get("/transactions", authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ detail: "Access denied" });
+  }
   try {
     const transactions = await Transaction.find().sort({ date: -1, createdAt: -1 });
     res.json({ transactions });
@@ -113,9 +151,10 @@ app.get("/transactions", async (req, res) => {
 });
 
 // Add a new transaction
-app.post("/transactions", async (req, res) => {
+app.post("/transactions", authenticateToken, async (req, res) => {
   try {
-    const { username, description, amount, date, type } = req.body;
+    const { description, amount, date, type } = req.body;
+    const username = req.user.username;
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(404).json({ detail: "User not found" });
@@ -190,6 +229,45 @@ app.delete("/transactions/:id", async(req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Get all users (admin only)
+app.get("/users", authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ detail: "Access denied" });
+    }
+    const users = await User.find({}, { password: 0 }).sort({ username: 1 });
+    res.json({ users });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Delete a user (admin only)
+app.delete("/users/:id", authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ detail: "Admin access required" });
+    }
+    const { id } = req.params;
+    if (req.user.userId === id) {
+      return res.status(400).json({ detail: "Cannot delete your own account" });
+    }
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ detail: "User not found" });
+    }
+    await Transaction.deleteMany({ username: deletedUser.username });
+    res.json({ 
+      message: "User deleted successfully",
+      deletedId: id 
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).json({ detail: "Server error" });
   }
 });
