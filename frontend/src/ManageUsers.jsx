@@ -59,6 +59,58 @@ function ManageUsers() {
     setDeletingUserId(null);
   };
 
+  const handleUpgradeUser = async (userId) => {
+    try {
+      const response = await authFetch(`http://localhost:5000/users/${userId}/upgrade`, {
+        method: 'PUT',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update the user in local state
+        setUsers(prev => prev.map(u =>
+          u._id === userId
+            ? { ...u, isPro: true }
+            : u
+        ));
+
+        console.log("User upgraded to Pro successfully");
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to upgrade user:", errorData.detail);
+      }
+    } catch (error) {
+      console.error("Error upgrading user:", error);
+    }
+  };
+
+  const handleDowngradeUser = async (userId) => {
+    try {
+      const response = await authFetch(`http://localhost:5000/users/${userId}/downgrade`, {
+        method: 'PUT',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Update the user in local state
+        setUsers(prev => prev.map(u =>
+          u._id === userId
+            ? { ...u, isPro: false }
+            : u
+        ));
+
+        console.log("User downgraded from Pro successfully");
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to downgrade user:", errorData.detail);
+      }
+    } catch (error) {
+      console.error("Error downgrading user:", error);
+    }
+  };
+
   if (!isLoggedIn) {
     return <Navigate to="/login" />;
   }
@@ -105,11 +157,32 @@ function ManageUsers() {
                   <span className={`badge ${userItem.admin ? 'bg-success' : 'bg-secondary'} ms-2`}>
                     {userItem.admin ? 'Admin' : 'User'}
                   </span>
+                  {userItem.isPro && (
+                    <span className="badge bg-warning ms-1">Pro</span>
+                  )}
+                  <small className="text-muted ms-2">
+                    Transactions: {userItem.transactionCount}
+                  </small>
                 </div>
-                <i
-                  className="fas fa-trash delete-icon"
-                  onClick={() => handleDeleteUser(userItem._id)}
-                ></i>
+                <div className="user-actions">
+                  {!userItem.isPro && !userItem.admin && (
+                    <button
+                      className="btn btn-sm btn-warning me-2"
+                      onClick={() => handleUpgradeUser(userItem._id)}
+                    >
+                      Upgrade to Pro
+                    </button>
+                  )}
+                  {userItem.isPro && !userItem.admin && (
+                    <button
+                      className="btn btn-sm btn-secondary me-2"
+                      onClick={() => handleDowngradeUser(userItem._id)}
+                    >
+                      Remove Pro
+                    </button>
+                  )}
+                  <i className="fas fa-trash delete-icon" onClick={() => handleDeleteUser(userItem._id)}></i>
+                </div>
               </div>
 
               {deletingUserId === userItem._id && (
