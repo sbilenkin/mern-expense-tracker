@@ -12,8 +12,10 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
     "bootstrap": "^5.3.8",
+    "chart.js": "^4.5.1",
     "fontawesome-free": "^1.0.4",
     "react": "^19.1.1",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.2",
     "react-toastify": "^11.0.5"

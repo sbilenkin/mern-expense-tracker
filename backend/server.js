@@ -35,6 +35,8 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   admin: { type: Boolean, default: false },
+  transactionCount: { type: Number, default: 0 },
+  isPro: { type: Boolean, default: false },
 });
 
 const User = mongoose.model("User", userSchema);
@@ -87,7 +89,7 @@ app.post("/login", async (req, res) => {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.json({ 
+    res.json({
       message: "Login successful",
       token,
       user: { username: user.username, isAdmin: user.admin }
@@ -159,6 +161,12 @@ app.post("/transactions", authenticateToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ detail: "User not found" });
     }
+    if (!user.isPro && !user.admin && user.transactionCount >= 10) {
+      return res.status(403).json({
+        detail: "Transaction limit reached. Upgrade to Pro for unlimited transactions.",
+        limitReached: true
+      });
+    }
     if (!description || !amount || !type) {
       return res.status(400).json({ detail: "Missing required fields" });
     }
@@ -173,6 +181,10 @@ app.post("/transactions", authenticateToken, async (req, res) => {
       date: date ? new Date(date) : new Date(),
     });
     await newTransaction.save();
+    await User.findOneAndUpdate(
+      { username },
+      { $inc: { transactionCount: 1 } }
+    );
     res.status(201).json({ message: "Transaction added successfully", transaction: newTransaction });
   } catch (error) {
     console.error(error);
@@ -216,13 +228,17 @@ app.put("/transactions/:id", async (req, res) => {
 });
 
 // Delete a transaction
-app.delete("/transactions/:id", async(req, res) => {
+app.delete("/transactions/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deletedTransaction = await Transaction.findByIdAndDelete(id);
     if (!deletedTransaction) {
       return res.status(404).json({ detail: "Transaction not found" });
     }
+    await User.findOneAndUpdate(
+      { username: deletedTransaction.username },
+      { $inc: { transactionCount: -1 } }
+    );
     res.json({
       message: "Transaction deleted successfully",
       deletedId: id
@@ -262,12 +278,96 @@ app.delete("/users/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ detail: "User not found" });
     }
     await Transaction.deleteMany({ username: deletedUser.username });
-    res.json({ 
+    res.json({
       message: "User deleted successfully",
-      deletedId: id 
+      deletedId: id
     });
   } catch (error) {
     console.error("Error deleting user:", error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Get user info (including transaction count and pro status)
+app.get("/user/info", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne(
+      { username: req.user.username }, 
+      { password: 0 }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ detail: "User not found" });
+    }
+    
+    const remainingTransactions = user.isPro || user.admin 
+      ? null 
+      : Math.max(0, 10 - user.transactionCount);
+    
+    res.json({
+      user: {
+        ...user.toObject(),
+        remainingTransactions
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Upgrade user to Pro (admin only)
+app.put("/users/:id/upgrade", authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ detail: "Admin access required" });
+    }
+    
+    const { id } = req.params;
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { isPro: true },
+      { new: true, select: { password: 0 } }
+    );
+    
+    if (!updatedUser) {
+      return res.status(404).json({ detail: "User not found" });
+    }
+    
+    res.json({
+      message: "User upgraded to Pro successfully",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ detail: "Server error" });
+  }
+});
+
+// Downgrade user from Pro (admin only)
+app.put("/users/:id/downgrade", authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ detail: "Admin access required" });
+    }
+    
+    const { id } = req.params;
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { isPro: false },
+      { new: true, select: { password: 0 } }
+    );
+    
+    if (!updatedUser) {
+      return res.status(404).json({ detail: "User not found" });
+    }
+    
+    res.json({
+      message: "User downgraded from Pro",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ detail: "Server error" });
   }
 });

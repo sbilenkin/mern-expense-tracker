@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Transaction from './Transaction';
+import SpendingChart from './SpendingChart';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -107,6 +108,9 @@ function Home() {
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
                 <a className="nav-link active" aria-current="page" href="#">Home</a>
+              </li>
+              <li className="nav-item">
+                <a className="nav-link" aria-current="page" href="/statistics">Statistics</a>
               </li>
               {isAdmin && (
                 <li>

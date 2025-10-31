@@ -5,6 +5,7 @@ import Home from './Home';
 import Login from './Login';
 import Signup from './Signup';
 import AddTransactions from './AddTransactions';
+import Statistics from './Statistics';
 import ManageUsers from './ManageUsers';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
@@ -19,6 +20,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/add-transactions" element={<AddTransactions />} />
+          <Route path="/statistics" element={<Statistics />} />
           <Route path="/user-management" element={<ManageUsers />} />
         </Routes>
       </BrowserRouter>

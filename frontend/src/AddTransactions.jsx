@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
@@ -8,33 +8,49 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 function AddTransactions() {
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
-  const { authFetch, logout } = useAuth();
+  const { authFetch, logout, userInfo, fetchUserInfo, isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    // Only fetch user info if logged in
+    if (isLoggedIn) {
+      fetchUserInfo();
+    }
+  }, [isLoggedIn]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const username = sessionStorage.getItem('username');
     const description = formData.get('description');
     const amount = parseFloat(formData.get('amount'));
     const type = formData.get('type');
     const date = formData.get('date') || new Date().toISOString().split('T')[0];
-    // Trying to figure out why date is not being sent correctly
-    console.log({ username, description, amount, date, type });
     try {
       const response = await authFetch('http://localhost:5000/transactions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, description, amount, date, type }),
+        body: JSON.stringify({ description, amount, date, type }),
       });
+      if (!response) {
+        return;
+      }
       const data = await response.json();
       if (response.ok) {
         setMessage('Transaction added successfully!');
         event.target.reset();
-        navigate('/');
+        // Only fetch user info if still logged in
+        if (isLoggedIn) {
+          fetchUserInfo();
+        }
+        setTimeout(() => {
+          if (isLoggedIn) { // Check again before navigating
+            navigate('/');
+          }
+        }, 1500);
       } else {
-        setMessage(data.detail || 'Failed to add transaction');
+        if (data.limitReached) {
+          setMessage('Transaction limit reached! Upgrade to Pro for unlimited transactions.');
+        } else {
+          setMessage(data.detail || 'Failed to add transaction');
+        }
       }
     } catch (error) {
       setMessage('Error adding transaction: ' + error.message);
@@ -43,34 +59,52 @@ function AddTransactions() {
 
   const handleLogout = () => {
     logout();
+  };
+
+  // Check if user is logged in
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
   }
 
   return (
     <div className="AddTransactions">
       <nav className="navbar navbar-expand-lg">
         <div className="container-fluid">
-          <a className="navbar-brand" href="#">Expense Tracker</a>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <Link className="navbar-brand" to="/">Expense Tracker</Link>
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarSupportedContent">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
-                <a className="nav-link" aria-current="page" href="/">Home</a>
+                <Link className="nav-link" to="/">Home</Link>
               </li>
-              {/* <li className="nav-item">
-                                <a className="nav-link" href="#">Link</a>
-                            </li>
-                            <li className="nav-item">
-                                <a className="nav-link disabled" aria-disabled="true">Disabled</a>
-                            </li> */}
+              <li className="nav-item">
+                <Link className="nav-link" to="/statistics">Statistics</Link>
+              </li>
             </ul>
-            <button id="logout-button" className="btn btn-primary ms-auto" onClick={handleLogout}>Log Out</button>
+            <button id="logout-button" className="btn btn-primary ms-auto" onClick={handleLogout}>
+              Log Out
+            </button>
           </div>
         </div>
       </nav>
+      
       <div className="form-container">
         <h2 className="form-welcome">Add a transaction</h2>
+        
+        {/* Only show limit warning if user is logged in and userInfo exists */}
+        {isLoggedIn && userInfo && !userInfo.isPro && !userInfo.admin && (
+          <div className="limit-warning">
+            <p>
+              <strong>Transactions remaining:</strong> {userInfo.remainingTransactions}/10
+              {userInfo.remainingTransactions <= 3 && (
+                <span className="text-danger"> - Upgrade to Pro for unlimited transactions!</span>
+              )}
+            </p>
+          </div>
+        )}
+        
         <form className="transaction-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="description">Description</label>
@@ -121,4 +155,4 @@ function AddTransactions() {
   );
 }
 
-export default AddTransactions
+export default AddTransactions;
