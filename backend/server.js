@@ -72,6 +72,24 @@ app.get("/health", (req, res) => {
   res.json({ database: dbStatus });
 });
 
+// Email connection check
+app.post('/test-email', async (req, res) => {
+  try {
+    const { generateMonthlySummaries, testEmailConnection } = await import('./email.js');
+    
+    // Test connection first
+    await testEmailConnection();
+    
+    // Send test emails
+    await generateMonthlySummaries();
+    
+    res.json({ message: 'Test emails sent successfully' });
+  } catch (error) {
+    console.error('Error sending test emails:', error);
+    res.status(500).json({ detail: 'Failed to send test emails', error: error.message });
+  }
+});
+
 // Login endpoint
 app.post("/login", async (req, res) => {
   try {
@@ -375,3 +393,5 @@ app.put("/users/:id/downgrade", authenticateToken, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+export { User, Transaction };
